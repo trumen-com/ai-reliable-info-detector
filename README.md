@@ -1,4 +1,4 @@
-# TruthLens AI (__name to be changed__)
+#  AI Reliable Info Detector
 
 **AI-Powered Misinformation & Bias Detection System**
 
