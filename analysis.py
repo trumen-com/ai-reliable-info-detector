@@ -59,11 +59,13 @@ def run_analysis(text: str, url: str = "") -> dict:
     content_result = analyse_content(text)
     content_score = content_result.get("score", 50)
     content_fake_prob = content_result.get("fake_probability", 0.5)
+    content_flagged = content_result.get("flagged_words", [])
     report["pillars"]["content"] = {
         "score": content_score,
         "fake_probability": content_fake_prob,
         "explanation": explain_content(content_score, content_fake_prob),
         "raw": content_result,
+        "flagged_words": content_flagged,
     }
 
     # ── Pillar 2: Source Credibility ──────────────────────────────────────────
@@ -89,11 +91,13 @@ def run_analysis(text: str, url: str = "") -> dict:
     # ── Pillar 3: Bias Detection ──────────────────────────────────────────────
     bias_result = analyse_bias(text)
     bias_score = bias_result.get("score", 50)
+    bias_flagged = bias_result.get("flagged_words", [])
     report["pillars"]["bias"] = {
         "score": bias_score,
         "level": bias_result.get("level", "Unknown"),
         "explanation": explain_bias(bias_score, bias_result.get("level", "Unknown")),
         "raw": bias_result,
+        "flagged_words": bias_flagged,
     }
 
     # ── Pillar 4: Emotional Manipulation ─────────────────────────────────────
@@ -152,5 +156,25 @@ def run_analysis(text: str, url: str = "") -> dict:
         "emotion": emotion_score,
     }
     report["verdict"] = generate_verdict(final_score, pillar_scores_for_verdict)
+
+    # ── Combine flagged words from all pillars for highlighting ────────────────
+    # Collect flagged words from all pillars and convert to unified format
+    # Keep emotion in dict format (categories), others as lists
+    combined_flagged = {}
+    
+    # Emotion: Keep original dict format {category: [words]}
+    combined_flagged.update(emotion_result.get("flagged_words", {}))
+    
+    # Bias: Add as list (even if empty, so it appears in legend if keywords exist)
+    bias_flagged = bias_result.get("flagged_words", [])
+    if isinstance(bias_flagged, list):
+        combined_flagged["bias"] = bias_flagged
+    
+    # Content: Add as list (even if empty)
+    content_flagged = content_result.get("flagged_words", [])
+    if isinstance(content_flagged, list):
+        combined_flagged["content"] = content_flagged
+    
+    report["flagged_words_by_criterion"] = combined_flagged
 
     return report

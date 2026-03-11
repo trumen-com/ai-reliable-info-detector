@@ -33,76 +33,88 @@ if "fetched" not in st.session_state:
 if "mode" not in st.session_state:
     st.session_state.mode = "single"
 
-# CSS
-st.markdown("""
+# CSS - Custom component styling (Streamlit handles theme via config.toml)
+css = """
 <style>
-    .stApp { background-color: #0e1117; color: #e0e0e0; }
-
+    header, [data-testid="collapsedControl"] { visibility: visible; }
+    .css-18e3th9 { padding-top: 1rem; }
+    
     .tl-logo {
         font-size: 2.6rem; font-weight: 900;
         background: linear-gradient(135deg, #00d4ff, #7b2fff);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         letter-spacing: -1px;
     }
-    .tl-tagline { color: #666; font-size: 0.9rem; margin-top: 0.1rem; }
+    .tl-tagline { font-size: 0.9rem; margin-top: 0.1rem; }
     .tl-sdg-badge {
-        display:inline-block; background:#1a2a1a; border:1px solid #2d5a2d;
-        color:#4caf50; font-size:0.72rem; padding:2px 9px; border-radius:20px; margin:2px;
+        display:inline-block; border: 1px solid #4caf50;
+        font-size:0.72rem; padding:2px 9px; border-radius:20px; margin:2px;
     }
-
     .card {
-        background:#161b22; border-radius:12px; padding:1.25rem;
-        border:1px solid #30363d; margin-bottom:0.75rem;
+        border-radius:12px; padding:1.25rem;
+        border:1px solid; margin-bottom:0.75rem;
     }
-    .pillar-title { font-size:0.78rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#666; }
+    .pillar-title {
+        font-size:0.88rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+        position: relative; display: inline-block;
+    }
+    .pillar-title .pillar-num {
+        font-size:1.25rem; font-weight:900; margin-right:0.3rem; vertical-align: middle;
+    }
+    .pillar-title:after {
+        content: '';
+        display: block;
+        width: 2.5rem;
+        height: 3px;
+        background: currentColor;
+        margin-top: 4px;
+        border-radius: 2px;
+    }
+    .pillar-title.content { color:#00d4ff; }
+    .pillar-title.credibility { color:#2e7d32; }
+    .pillar-title.bias { color:#e65100; }
+    .pillar-title.emotion { color:#c62828; }
     .pillar-score { font-size:1.9rem; font-weight:800; line-height:1.1; }
-    .pillar-exp   { font-size:0.85rem; color:#aaa; line-height:1.65; margin-top:0.6rem; }
-
+    .pillar-exp { font-size:0.85rem; line-height:1.65; margin-top:0.6rem; }
     .verdict { border-radius:10px; padding:1rem 1.25rem; border-left:5px solid; margin:0.75rem 0; }
-    .verdict-green  { background:#0d2016; border-color:#2ea043; }
-    .verdict-yellow { background:#1f1a08; border-color:#d29922; }
-    .verdict-orange { background:#1f1208; border-color:#e3711a; }
-    .verdict-red    { background:#200d0d; border-color:#f85149; }
-
+    .verdict-green { background:rgba(46, 125, 50, 0.15); border-color:#2e7d32; }
+    .verdict-yellow { background:rgba(245, 127, 23, 0.15); border-color:#f57f17; }
+    .verdict-orange { background:rgba(230, 81, 0, 0.15); border-color:#e65100; }
+    .verdict-red { background:rgba(211, 47, 47, 0.15); border-color:#d32f2f; }
     .article-text {
-        font-size:0.88rem; line-height:1.75; color:#ccc;
-        background:#0d1117; border:1px solid #30363d;
+        font-size:0.88rem; line-height:1.75;
         border-radius:8px; padding:1rem 1.1rem;
         max-height:280px; overflow-y:auto;
         white-space:pre-wrap; word-break:break-word;
+        border:1px solid;
     }
-
     .hist-item {
-        background:#161b22; border:1px solid #30363d; border-radius:8px;
+        border:1px solid; border-radius:8px;
         padding:0.6rem 0.85rem; margin-bottom:0.4rem;
         font-size:0.82rem;
     }
-
     .cmp-score { font-size:3rem; font-weight:900; text-align:center; line-height:1; }
-    .cmp-label { font-size:0.8rem; color:#666; text-align:center; }
-
+    .cmp-label { font-size:0.8rem; text-align:center; }
     .stTextArea textarea, .stTextInput input {
-        background:#161b22 !important; color:#e0e0e0 !important;
-        border-color:#30363d !important;
+        border-color: currentColor !important;
     }
     .stButton button {
         background:linear-gradient(135deg,#00d4ff15,#7b2fff15) !important;
-        border:1px solid #7b2fff88 !important; color:#fff !important;
+        border:1px solid #7b2fff88 !important;
         font-weight:600 !important;
     }
     .stButton button:hover {
         background:linear-gradient(135deg,#00d4ff30,#7b2fff30) !important;
     }
-
     .disclaimer {
-        background:#161b22; border:1px solid #30363d; border-radius:8px;
-        padding:0.65rem 1rem; font-size:0.75rem; color:#555;
+        border:1px solid; border-radius:8px;
+        padding:0.65rem 1rem; font-size:0.75rem;
         text-align:center; margin-top:1.5rem;
     }
-
-    section[data-testid="stSidebar"] { background:#0d1117; }
 </style>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(css, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -134,7 +146,7 @@ def render_verdict_banner(report: dict):
     <div class="verdict verdict-{colour}">
         <strong>{icon} {verdict['risk_level']}</strong> &nbsp;·&nbsp;
         <strong style="font-size:1.1rem;">{report['final_score']}/100</strong>
-        <p style="margin:.4rem 0 0;color:#bbb;font-size:0.85rem;">{verdict['summary']}</p>
+        <p style="margin:.4rem 0 0;color:#666;font-size:0.85rem;">{verdict['summary']}</p>
     </div>""", unsafe_allow_html=True)
 
 
@@ -147,7 +159,7 @@ def render_pillar_cards(report: dict, text: str = ""):
         cc = score_colour(cs)
         st.markdown(f"""
         <div class="card">
-            <div class="pillar-title">① Content Analysis</div>
+            <div class="pillar-title content"><span class="pillar-num">①</span>Content Analysis</div>
             <div class="pillar-score" style="color:{cc};">{cs}<span style="font-size:.9rem;color:#555;">/100</span></div>
             <div class="pillar-exp">{p['content']['explanation']}</div>
         </div>""", unsafe_allow_html=True)
@@ -156,7 +168,7 @@ def render_pillar_cards(report: dict, text: str = ""):
         bc = score_colour(bs, invert=True)
         st.markdown(f"""
         <div class="card">
-            <div class="pillar-title">③ Bias Detection &nbsp;<span style="color:#555;font-size:.75rem;">({p['bias']['level']})</span></div>
+            <div class="pillar-title bias"><span class="pillar-num">③</span>Bias Detection &nbsp;<span style="color:#555;font-size:.75rem;">({p['bias']['level']})</span></div>
             <div class="pillar-score" style="color:{bc};">{bs}<span style="font-size:.9rem;color:#555;">/100</span></div>
             <div class="pillar-exp">{p['bias']['explanation']}</div>
         </div>""", unsafe_allow_html=True)
@@ -168,7 +180,7 @@ def render_pillar_cards(report: dict, text: str = ""):
         dom = f"<div style='font-size:.77rem;color:#666;margin-top:.2rem;'>{src['domain']} · {src['label']}</div>" if src["domain"] else ""
         st.markdown(f"""
         <div class="card">
-            <div class="pillar-title">② Source Credibility</div>
+            <div class="pillar-title credibility"><span class="pillar-num">②</span>Source Credibility</div>
             <div class="pillar-score" style="color:{sc};">{ss}<span style="font-size:.9rem;color:#555;">/100</span></div>
             {dom}
             <div class="pillar-exp">{src['explanation']}</div>
@@ -182,7 +194,7 @@ def render_pillar_cards(report: dict, text: str = ""):
         )
         st.markdown(f"""
         <div class="card">
-            <div class="pillar-title">④ Emotional Manipulation</div>
+            <div class="pillar-title emotion"><span class="pillar-num">④</span>Emotional Manipulation</div>
             <div class="pillar-score" style="color:{ec};">{es}<span style="font-size:.9rem;color:#555;">/100</span></div>
             <div style="margin:.3rem 0;">{emotions_str}</div>
             <div class="pillar-exp">{p['emotion']['explanation']}</div>
@@ -190,14 +202,26 @@ def render_pillar_cards(report: dict, text: str = ""):
 
     # Highlighted text
     if text:
-        flagged = p["emotion"]["flagged_words"]
+        # Get combined flagged words from all pillars
+        flagged = p.get("flagged_words_by_criterion", {})
+        
+        # If empty, fall back to emotion flagged_words for backward compatibility
+        if not flagged:
+            flagged = p.get("emotion", {}).get("flagged_words", {})
+        
         st.markdown("#### 🖍️ Manipulation Word Highlights")
-        if flagged:
+        
+        # Check if there are any flagged words (handle both dict and list formats)
+        has_flagged = False
+        if isinstance(flagged, dict):
+            has_flagged = any(v for v in flagged.values() if v)
+        
+        if has_flagged and flagged:
             st.markdown(render_highlight_legend(flagged), unsafe_allow_html=True)
             st.markdown(highlight_text(text, flagged), unsafe_allow_html=True)
         else:
             st.markdown(
-                "<div style='color:#555;font-size:.85rem;'>No manipulation keywords detected in this text.</div>",
+                "<div style='color:#555;font-size:.85rem;'>No criterion-specific keywords detected in this text.</div>",
                 unsafe_allow_html=True
             )
             st.markdown(highlight_text(text, {}), unsafe_allow_html=True)
@@ -357,10 +381,10 @@ if st.session_state.mode == "single":
         st.markdown("""
         <div style="color:#888;font-size:0.87rem;line-height:1.85;">
         Four independent AI pillars analyse every article:<br><br>
-        <strong style="color:#00d4ff;">① Content Analysis</strong> — fake news language patterns<br>
-        <strong style="color:#00d4ff;">② Source Credibility</strong> — domain reputation database<br>
-        <strong style="color:#00d4ff;">③ Bias Detection</strong> — subjective framing & loaded language<br>
-        <strong style="color:#00d4ff;">④ Emotional Manipulation</strong> — fear, outrage & shock signals<br><br>
+        <strong style="color:#00d4ff;">①</strong> <strong style="color:#00d4ff;">Content Analysis</strong> — fake news language patterns<br>
+        <strong style="color:#2e7d32;">②</strong> <strong style="color:#2e7d32;">Source Credibility</strong> — domain reputation database<br>
+        <strong style="color:#e65100;">③</strong> <strong style="color:#e65100;">Bias Detection</strong> — subjective framing & loaded language<br>
+        <strong style="color:#c62828;">④</strong> <strong style="color:#c62828;">Emotional Manipulation</strong> — fear, outrage & shock signals<br><br>
         Each pillar explains <em>why</em> it scored that way — not just a number.<br>
         Flagged words are <mark style="background:#3d1a1a;color:#ff8080;border-radius:3px;
         padding:1px 4px;">highlighted inline</mark> in the article text.

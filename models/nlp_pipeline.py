@@ -58,8 +58,9 @@ def _get_bias_classifier():
     return _bias_classifier
 
 
-# Manipulation keywords
-MANIPULATION_KEYWORDS = {
+# Keywords for each criterion to enable color-coded highlighting
+# emotion (red) - manipulation keywords
+EMOTION_KEYWORDS = {
     "fear": [
         "terrifying", "horrifying", "catastrophic", "devastating", "deadly",
         "dangerous", "alarming", "frightening", "nightmare", "crisis",
@@ -88,12 +89,78 @@ MANIPULATION_KEYWORDS = {
     ],
 }
 
+# bias (orange) - words suggesting biased or subjective framing
+BIAS_KEYWORDS = [
+    "biased", "subjective", "opinionated", "one-sided", "slanted",
+    "prejudicial", "partisan", "skewed", "distorted", "twisted",
+    "misleading", "distortion", "propaganda", "spin", "narrative",
+    "dogma", "ideologue", "extremist", "fanatic", "zealot",
+    "presumably", "allegedly", "supposedly", "rumor", "claim", "claims",
+    "attack", "assault", "war", "military", "conflict",
+    "soft-pitched", "pitched", "reassuring", "opposing",
+    "risks", "threat", "threats", "danger",
+]
+
+# content (green) - words suggesting credible, well-sourced content
+CREDIBLE_CONTENT_KEYWORDS = [
+    "study", "research", "findings", "analysis", "data",
+    "scientific", "evidence", "proven", "confirmed", "verified",
+    "reported", "according to", "sources", "experts", "researchers",
+    "investigation", "report", "documented", "records",
+    "survey", "poll", "statistics", "peer-reviewed", "academic",
+    "official", "credible", "reliable", "established",
+]
+
+# content (green) - words suggesting lack of credible sourcing
+UNCREDIBLE_CONTENT_KEYWORDS = [
+    "unverified", "unproven", "unsourced", "unconfirmed", "alleged",
+    "unnamed", "anonymous", "insider", "whistleblower", "sources say",
+    "gossip", "rumor", "hearsay", "speculation", "guess",
+    "unsubstantiated", "baseless", "unfounded", "claims",
+    "supposedly", "reportedly", "possibly", "may",
+]
+
+
+def _find_emotion_keywords(text: str) -> list:
+    """Find emotional manipulation keywords in text."""
+    text_lower = text.lower()
+    found = []
+    for category, words in EMOTION_KEYWORDS.items():
+        matches = [w for w in words if re.search(r'\b' + re.escape(w) + r'\b', text_lower)]
+        found.extend(matches)
+    return found
+
+
+def _find_bias_keywords(text: str) -> list:
+    """Find bias-related keywords in text."""
+    text_lower = text.lower()
+    found = []
+    for word in BIAS_KEYWORDS:
+        if re.search(r'\b' + re.escape(word) + r'\b', text_lower):
+            found.append(word)
+    return found
+
+
+def _find_content_keywords(text: str) -> list:
+    """Find credibility-related keywords (both positive and negative) in text."""
+    text_lower = text.lower()
+    found = []
+    # Look for credible content keywords
+    for word in CREDIBLE_CONTENT_KEYWORDS:
+        if re.search(r'\b' + re.escape(word) + r'\b', text_lower):
+            found.append(word)
+    # Look for uncredible content keywords
+    for word in UNCREDIBLE_CONTENT_KEYWORDS:
+        if re.search(r'\b' + re.escape(word) + r'\b', text_lower):
+            found.append(word)
+    return found
+
 
 def _find_flagged_words(text: str) -> dict:
-    """Find manipulation keywords present in text, grouped by category."""
+    """Find manipulation keywords present in text, grouped by category (for emotion)."""
     text_lower = text.lower()
     found = {}
-    for category, words in MANIPULATION_KEYWORDS.items():
+    for category, words in EMOTION_KEYWORDS.items():
         matches = [w for w in words if re.search(r'\b' + re.escape(w) + r'\b', text_lower)]
         if matches:
             found[category] = matches
@@ -142,15 +209,19 @@ def analyse_content(text: str) -> dict:
             continue
 
     if not fake_probs:
-        return {"score": 50, "fake_probability": 0.5, "error": "Model inference failed"}
+        return {"score": 50, "fake_probability": 0.5, "error": "Model inference failed", "flagged_words": []}
 
     avg_fake_prob = float(np.mean(fake_probs))
     authenticity_score = round((1 - avg_fake_prob) * 100)
+    
+    # Find content-related keywords
+    flagged_words = _find_content_keywords(text)
 
     return {
         "score": authenticity_score,
         "fake_probability": round(avg_fake_prob, 3),
         "chunks_analysed": len(fake_probs),
+        "flagged_words": flagged_words,
     }
 
 
@@ -178,10 +249,13 @@ def analyse_bias(text: str) -> dict:
             continue
 
     if not bias_probs:
-        return {"score": 50, "error": "Model inference failed"}
+        return {"score": 50, "error": "Model inference failed", "flagged_words": []}
 
     avg_bias = float(np.mean(bias_probs))
     bias_score = round(avg_bias * 100)
+    
+    # Find bias-related keywords
+    flagged_words = _find_bias_keywords(text)
 
     # Classify level
     if bias_score >= 70:
@@ -195,6 +269,7 @@ def analyse_bias(text: str) -> dict:
         "score": bias_score,
         "level": level,
         "bias_probability": round(avg_bias, 3),
+        "flagged_words": flagged_words,
     }
 
 
